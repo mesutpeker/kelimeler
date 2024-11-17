@@ -138,6 +138,20 @@
             font-size: 1.2em;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             position: relative;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
+
+        .option-button:focus {
+            outline: none;
+            background: #f8f8f8;
+        }
+
+        .option-button:active {
+            background: #f8f8f8;
         }
 
         .option-button:hover {
@@ -1064,62 +1078,92 @@
         }
 
         function showNextWord() {
-            if (currentWordIndex >= wordPairs[currentCategory].length) {
-                showFeedback(`Tebrikler! Tüm soruları tamamladınız! Toplam puanınız: ${score}`, true);
-                setTimeout(() => {
-                    resetGame();
-                }, 2000);
-                return;
-            }
+    if (currentWordIndex >= wordPairs[currentCategory].length) {
+        showFeedback(`Tebrikler! Tüm soruları tamamladınız! Toplam puanınız: ${score}`, true);
+        setTimeout(() => {
+            resetGame();
+        }, 2000);
+        return;
+    }
+
+    currentWord = wordPairs[currentCategory][currentWordIndex][0];
+    currentAnswer = wordPairs[currentCategory][currentWordIndex][1];
+    currentWordIndex++;
+
+    document.getElementById('wordDisplay').textContent = currentWord;
+    const options = getRandomOptions(currentAnswer, currentCategory);
+    
+    const optionsContainer = document.getElementById('optionsContainer');
+    
+    // Eski butonları tamamen temizle
+    while (optionsContainer.firstChild) {
+        optionsContainer.removeChild(optionsContainer.firstChild);
+    }
+    
+    options.forEach(option => {
+        const button = document.createElement('button');
+        button.className = 'option-button';
+        button.textContent = option;
         
-            currentWord = wordPairs[currentCategory][currentWordIndex][0];
-            currentAnswer = wordPairs[currentCategory][currentWordIndex][1];
-            currentWordIndex++;
+        const handleClick = (e) => {
+            if (e) e.preventDefault();
+            checkAnswer(option, button);
+        };
         
-            document.getElementById('wordDisplay').textContent = currentWord;
-            const options = getRandomOptions(currentAnswer, currentCategory);
-            
-            const optionsContainer = document.getElementById('optionsContainer');
-            optionsContainer.innerHTML = '';
-            
-            options.forEach(option => {
-                const button = document.createElement('button');
-                button.className = 'option-button';
-                button.textContent = option;
-                button.onclick = () => checkAnswer(option, button);
-                optionsContainer.appendChild(button);
+        button.addEventListener('mouseup', handleClick);
+        button.addEventListener('touchend', handleClick);
+        
+        optionsContainer.appendChild(button);
+    });
+}
+
+function checkAnswer(selectedAnswer, button) {
+    const buttons = document.querySelectorAll('.option-button');
+    
+    // Tüm butonları devre dışı bırak ve event listener'ları kaldır
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+
+    if (selectedAnswer === currentAnswer) {
+        button.classList.add('correct');
+        showEmojiFeedback(true, button);
+        showFeedback('Doğru cevap! +10 puan', true);
+        updateScore(10);
+        
+        setTimeout(() => {
+            // Butonların stillerini sıfırla ve yeni soruya geç
+            buttons.forEach(btn => {
+                btn.className = 'option-button';
+                btn.disabled = false;
             });
-        }
-
-        function checkAnswer(selectedAnswer, button) {
-            const buttons = document.querySelectorAll('.option-button');
-            buttons.forEach(btn => btn.disabled = true);
-
-            if (selectedAnswer === currentAnswer) {
-                button.classList.add('correct');
-                showEmojiFeedback(true, button);
-                showFeedback('Doğru cevap! +10 puan', true);
-                updateScore(10);
-                
-                setTimeout(() => {
-                    showNextWord();
-                }, 1200);
-            } else {
-                button.classList.add('wrong');
-                showEmojiFeedback(false, button);
-                buttons.forEach(btn => {
-                    if (btn.textContent === currentAnswer) {
-                        btn.classList.add('correct');
-                    }
-                });
-                showFeedback('Yanlış cevap! -5 puan', false);
-                updateScore(-5);
-                
-                setTimeout(() => {
-                    showNextWord();
-                }, 1200);
+            showNextWord();
+        }, 1200);
+    } else {
+        button.classList.add('wrong');
+        showEmojiFeedback(false, button);
+        
+        buttons.forEach(btn => {
+            if (btn.textContent === currentAnswer) {
+                btn.classList.add('correct');
             }
-        }
+        });
+        
+        showFeedback('Yanlış cevap! -5 puan', false);
+        updateScore(-5);
+        
+        setTimeout(() => {
+            // Butonların stillerini sıfırla ve yeni soruya geç
+            buttons.forEach(btn => {
+                btn.className = 'option-button';
+                btn.disabled = false;
+            });
+            showNextWord();
+        }, 1200);
+    }
+}
 
         function showFeedback(message, isSuccess) {
             const feedback = document.getElementById('feedback');
